@@ -12,6 +12,6 @@
  * Import all request Types
  */
 import {subjectRequest} from './subject';
-
+import {userRequest} from './user';
 /** Export all request types */
-export {subjectRequest} 
+export {subjectRequest, userRequest} 
