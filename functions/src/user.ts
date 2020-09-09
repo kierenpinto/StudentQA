@@ -17,13 +17,29 @@ function assertUserType(obj: UserType) {
     }
 }
 
+type NameIdPair = {
+    name:string
+    id:string
+}
+
+type FireStoreNameIdPair = {
+    name:string
+    docRef:firestore.DocumentReference<firestore.DocumentData>
+}
+
+function assertNameIdPair(obj: NameIdPair,txt:string){
+    if (!("name" in obj && "id" in obj)){
+        throw new TypeError("NameIdPair is not valid in "+ txt);
+    }
+}
+
 class User {
     // type: UserType
-    constructor(public uid: string, public type: UserType, public teacherSubjects: Array<string>, public studentSubjects: Array<string>) {
+    constructor(public uid: string, public type: UserType, public teacherSubjects: Array<NameIdPair>, public studentSubjects: Array<NameIdPair>) {
         assertUserType(type);
         assertString(uid), 'UID';
-        teacherSubjects.map(s => assertString(s, 'teacherSubjectsID'));
-        studentSubjects.map(s => assertString(s, 'studentSubjectsID'));
+        teacherSubjects.map(s => assertNameIdPair(s, 'teacherSubjectsID'));
+        studentSubjects.map(s => assertNameIdPair(s, 'studentSubjectsID'));
     }
     isTeacher() {
         return this.type == UserType.Teacher;
@@ -36,8 +52,8 @@ class User {
 
 const userConverter = {
     toFirestore(user: User): FirebaseFirestore.DocumentData {
-        const teacherSubjects = user.teacherSubjects.map(ref => makeRef.subjects.doc(ref));
-        const studentSubjects = user.studentSubjects.map(ref => makeRef.subjects.doc(ref));
+        const teacherSubjects = user.teacherSubjects.map((sub):FireStoreNameIdPair => {return{name:sub.name, docRef:makeRef.subjects.doc(sub.id)}});
+        const studentSubjects = user.studentSubjects.map((sub):FireStoreNameIdPair => {return{name:sub.name, docRef:makeRef.subjects.doc(sub.id)}});
         return { uid: user.uid, type: user.type, teacherSubjects, studentSubjects };
     },
     fromFirestore(snapshot: FirebaseFirestore.QueryDocumentSnapshot): User {
@@ -55,8 +71,9 @@ const userConverter = {
                     return UserType.Other
             }
         }
-        const teacherSubjects = (<firestore.DocumentReference<firestore.DocumentData>[]>data.teacherSubjects).map(ref => ref.id);
-        const studentSubjects = (<firestore.DocumentReference<firestore.DocumentData>[]>data.studentSubjects).map(ref => ref.id);
+        const teacherSubjects = (<FireStoreNameIdPair[]>data.teacherSubjects).map((sub):NameIdPair => {return{name:sub.name, id:sub.docRef.id}});
+        
+        const studentSubjects = (<FireStoreNameIdPair[]>data.studentSubjects).map((sub):NameIdPair => {return{name:sub.name, id:sub.docRef.id}});
         return new User(data.uid, findType(), teacherSubjects, studentSubjects);
     }
 };

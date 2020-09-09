@@ -3,18 +3,19 @@ import { makeRef, firestoreDB } from './dbRefs';
 import { auth } from 'firebase-admin';
 import { userConverter } from './user';
 import { assertString } from './typeassertions';
+
+type UserTuple = {
+    uid:string,
+    name:string|undefined,
+    email:string,
+}
 /**
  * Subject class - shows the Subject information, including the number of user ids. 
  */
 class Subject {
-    public teachers_uids: Array<string>;
-    constructor(public name: string, public owner_uid: string, teachers_uids?: Array<string>) {
-        //Ensure that teacher_uids are present.
-        if (!teachers_uids) {
-            this.teachers_uids = [owner_uid];
-        } else {
-            this.teachers_uids = teachers_uids;
-        }
+    public teachers: Array<UserTuple>;
+    constructor(public name: string, public owner_uid: string, teachers: Array<UserTuple>) {
+            this.teachers = teachers;
     }
     isOwner(uid: string) {
         return this.owner_uid == uid;
@@ -29,7 +30,7 @@ const subjectConverter = {
         snapshot: FirebaseFirestore.QueryDocumentSnapshot
     ): Subject {
         const data = snapshot.data();
-        return new Subject(data.name, data.owner_uid, data.teacher_uids);
+        return new Subject(data.name, data.owner_uid, data.teachers);
     }
 }
 
@@ -37,7 +38,7 @@ const subjectConverter = {
  * This function handles create update and delete actions. Reads are done directly from firestore by the client.
  */
 
-const subjectRequest = functions.https.onCall((data, context) => {
+const subjectRequest = functions.https.onCall(async (data, context) => {
     try {
         const uid = context.auth?.uid;
         if (!uid) {
@@ -45,9 +46,16 @@ const subjectRequest = functions.https.onCall((data, context) => {
         }
         assertString(uid, 'UID');
         assertString(data.action, 'action (data.action)')
+        const userRecord = await auth().getUser(uid);
+        const email = userRecord.email;
+        if(!email){
+            throw new functions.https.HttpsError('data-loss', 'No email address found in user record - please set an email address for user');
+        }
+        const displayName = userRecord.displayName;
+
         switch (data.action) {
             case 'create':
-                return create(data, uid);
+                return create(data, uid, email, displayName);
             case 'update':
                 return update(data, uid);
             case 'delete':
@@ -78,9 +86,9 @@ const subjectRequest = functions.https.onCall((data, context) => {
  * @param data 
  * @param uid 
  */
-async function create(data: any, uid: string) {
+async function create(data: any, uid: string, email:string, displayName:string|undefined) {
     assertString(data.name, "Subject Name")
-    const sub = new Subject(<string>data.name, uid);
+    const sub = new Subject(<string>data.name, uid,[{uid,name:displayName, email}]);
     const subject = await makeRef.subjects.withConverter(subjectConverter).add(sub);
     const subjectID = subject.id;
     // console.log("subject ID", subjectID);
@@ -93,7 +101,7 @@ async function create(data: any, uid: string) {
     //     throw new functions.https.HttpsError('not-found', "User entry corresponding to teacher not found");
     // }
     return await firestoreDB.runTransaction(async (transaction)=> {
-        await addSubjectToTeacher(subjectID, transaction, uid);
+        await addSubjectToTeacher(subjectID, sub.name ,transaction, uid);
         return { response: 'success' }
     })
 
@@ -109,6 +117,8 @@ async function update(data: any, uid: string) {
     assertString(data.id, "Subject ID")
     const updateAction = <string>data.updateAction;
     const subjectID = <string>data.id;
+    // console.log(updateAction)
+    // console.log(subjectID);
     try {
         const subjRef = makeRef.subjects.withConverter(subjectConverter).doc(subjectID);
         await firestoreDB.runTransaction(async (trans) => {
@@ -117,15 +127,16 @@ async function update(data: any, uid: string) {
                 switch (updateAction) {
                     case 'rename':
                         assertString(data.name, 'Subject Name')
-                        sub.name = <string>data.name;
+                        const name = <string>data.name;
+                        await renameSubject(subjectID,sub,name,trans)
                         break; // Something here
                     case 'addTeacher':
                         assertString(data.teacher_email, "Teacher Email");
-                        addTeacher(subjectID, sub, trans, <string>data.teacher_email)
+                        await addTeacher(subjectID, sub, trans, <string>data.teacher_email)
                         break;
                     case 'removeTeacher':
                         assertString(data.teacher_uid, "Teacher UID");
-                        removeTeacher(subjectID, sub, trans, <string>data.teacher_uid);
+                        await removeTeacher(subjectID, sub, trans, <string>data.teacher_uid);
                         break //something here
                     default:
                         console.error("Invalid update action");
@@ -144,7 +155,7 @@ async function update(data: any, uid: string) {
         });
         return { response: 'success' }
     } catch (error) {
-        return { error }
+        throw new functions.https.HttpsError("unknown", error)
     }
 
 }
@@ -161,7 +172,9 @@ async function remove(data: any, uid: string) {
     await firestoreDB.runTransaction(async (trans) => {
         const subject = (await trans.get(subjRef)).data();
         if (subject?.isOwner(uid)) {
-
+            const teacher_uids = subject?.teachers.map(t=>t.uid);
+            await removeSubjectFromUsers(subjectID,trans,teacher_uids);
+            trans.delete(subjRef)
         } else {
             if (subject) {
                 throw new functions.https.HttpsError('permission-denied', "Subject can only be updated by its owner");
@@ -169,7 +182,7 @@ async function remove(data: any, uid: string) {
                 throw new functions.https.HttpsError('not-found', "Subject not found");
             }
         }
-        subject?.teachers_uids
+
     })
     return { response: 'success' }
 }
@@ -178,37 +191,104 @@ async function remove(data: any, uid: string) {
  * HELPER FUNCTIONS
  */
 
-async function removeTeacher(subjectID: string, subject: Subject, transaction: FirebaseFirestore.Transaction, teacher_uid: string,) {
+async function removeTeacher(subjectID: string, subject: Subject, transaction: FirebaseFirestore.Transaction, teacher_uid: string) {
     //Find UID
-    subject.teachers_uids.splice(subject.teachers_uids.indexOf(teacher_uid, 1))
-    // Add subject to user object
-    const user = (await transaction.get(makeRef.users.withConverter(userConverter).doc(teacher_uid))).data()
-    if (user) {
-        user.teacherSubjects.push(subjectID) // Add subject ID to the list of subjects a user is a teacher for.
-    } else {
-        throw new functions.https.HttpsError('not-found', "User entry corresponding to teacher not found");
+    const teacherIndex = subject.teachers.findIndex(t=>t.uid==teacher_uid)
+    if(teacherIndex<0){
+        throw new functions.https.HttpsError('not-found', "User entry in subject not found - cannot delete")
     }
-    return subject;
+    subject.teachers.splice(teacherIndex,1)
+    // Remove subject from user object
+    await removeSubjectFromUsers(subjectID,transaction,teacher_uid);
+}
+
+/**
+ * Delete a 
+ * @param subjectID 
+ * @param transaction 
+ * @param teacher_uids 
+ */
+async function removeSubjectFromUsers(subjectID: string,transaction: FirebaseFirestore.Transaction, teacher_uids: string | Array<string>){
+    if (!Array.isArray(teacher_uids)){
+        teacher_uids = [teacher_uids]
+    }
+    const userRefs = teacher_uids.map(id=> makeRef.users.withConverter(userConverter).doc(id))
+    const users = (await transaction.getAll(...userRefs)).map(d=>d.data())
+    users.forEach((user,index)=>{
+        if (user) {
+            const subjectIndex = user.teacherSubjects.findIndex(el=> el.id == subjectID)
+            if (subjectIndex<0){
+                throw new functions.https.HttpsError('not-found', "Subject entry in user not found - cannot delete")
+            }
+            user.teacherSubjects.splice(subjectIndex,1)// Delete subject ID from the list of subjects a user is a teacher for.
+            transaction.set(userRefs[index],user);
+        } else {
+            throw new functions.https.HttpsError('not-found', "User entry corresponding to teacher not found");
+        }
+    })
+
 }
 
 async function addTeacher(subjectID: string, subject: Subject, transaction: FirebaseFirestore.Transaction, teacher_email: string) {
     // Look-Up Teacher Email to Find UID of Teacher
-    const teacher_uid = (await auth().getUserByEmail(teacher_email)).uid
-    // Push UID of teacher into array
-    subject.teachers_uids.push(teacher_uid)
-    await addSubjectToTeacher(subjectID, transaction, teacher_uid);
+    try {
+        const teacher = (await auth().getUserByEmail(teacher_email))
+        const teacher_uid = teacher.uid;
+        const name = teacher.displayName;
+        const email = teacher.email;
+        console.log("Add Teacher", email,teacher_email)
+        if (!(email==teacher_email)){
+            throw new functions.https.HttpsError('failed-precondition', 'Teacher email address and user email address - report to administrator')
+        }
+        // Check user doesn't already exist in teacher:
+        if(subject.teachers.find(t=>t.uid==teacher_uid)){
+            throw new functions.https.HttpsError('already-exists', 'teacher already exists in subject');
+        }
+        // Push UID of teacher into array
+        subject.teachers.push({uid:teacher_uid, name, email:teacher_email});
+        await addSubjectToTeacher(subjectID, subject.name, transaction, teacher_uid);
+        
+    } catch (error) {
+        if (error == 'auth/user-not-found'){
+            throw new functions.https.HttpsError('not-found', "Teacher not found in system");
+        } else {
+            throw error;
+        }
+    }
+
 }
 
-async function addSubjectToTeacher(subjectID: string, transaction: FirebaseFirestore.Transaction, teacher_uid: string) {
+async function addSubjectToTeacher(subjectID: string, subjectName: string, transaction: FirebaseFirestore.Transaction, teacher_uid: string) {
     // Add subject to user object
     const userRef = makeRef.users.doc(teacher_uid).withConverter(userConverter)
     const user = (await transaction.get(userRef)).data()
     if (user) {
-        user.teacherSubjects.push(subjectID) // Add subject ID to the list of subjects a user is a teacher for.
+        if(user.teacherSubjects.find(t=>t.id==subjectID)){
+            throw new functions.https.HttpsError('already-exists', 'subject already exists in teacher');
+        }
+        user.teacherSubjects.push({name: subjectName, id: subjectID}) // Add subject ID to the list of subjects a user is a teacher for.
         transaction.set(userRef, user);
     } else {
         throw new functions.https.HttpsError('not-found', "User entry corresponding to teacher not found");
     }
 }
 
+async function renameSubject(subjectID:string, subject: Subject, newSubjectName:string, transaction: FirebaseFirestore.Transaction){
+    const teacher_references = subject.teachers.map(teacher_uid=>makeRef.users.doc(teacher_uid.uid).withConverter(userConverter));
+    const teacherSnap = await transaction.getAll(...teacher_references);
+    const teacherDocs = teacherSnap.map(snap=>snap.data());
+    teacherDocs.map((teacher,teacher_index)=>{
+        if (teacher){
+            //console.log("Teacher", teacher, "SubjectID", subjectID)
+            const subject_index = teacher.teacherSubjects.findIndex(sub=>sub.id == subjectID)
+            teacher.teacherSubjects[subject_index].name = newSubjectName;
+            //console.log(teacher_references[teacher_index],teacher)
+            transaction.set(teacher_references[teacher_index],teacher);
+        }else{
+            throw new functions.https.HttpsError('not-found', "When renaming a teacher did not exist");
+        }
+
+    })
+    subject.name = newSubjectName;
+}
 export { subjectRequest, Subject, subjectConverter };
