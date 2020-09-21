@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions';
 import { firestoreDB, makeRef } from './dbRefs';
 import { subjectConverter } from './subject';
+
 /**
  * Subject Group class - stores the class group information within a subject. 
  */
@@ -95,6 +96,7 @@ async function create(data: classRequestData, uid: string, transaction: Firebase
         throw new functions.https.HttpsError('invalid-argument', 'No subject group name has been specified in the request')
     }
     const subjectGroup = new SubjectGroup(data.name);
+    await transaction.get(makeRef.subjects.doc(data.subject_id))
     const ref = makeRef.classGroups(data.subject_id).withConverter(subjectGroupConverter).doc();
     await transaction.set(ref, subjectGroup)
     return { response: 'success' };
@@ -155,5 +157,10 @@ async function remove(data: classRequestData, uid: string, transaction: Firebase
     transaction.delete(ref)
     return { response: 'success' };
 }
+
+/*
+ * HELPER FUNCTIONS
+ */
+
 
 export { classRequest }

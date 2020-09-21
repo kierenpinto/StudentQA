@@ -4,12 +4,12 @@
 class ClassSession {
     /**
      * 
-     * @param id Session ID in database
+     * @param subject_id Subject ID parent in database
      * @param name Name of the session
      * @param session_start Session start timestamp
      * @param session_end Session end timestamp
      */
-    constructor(public id: string, public name:string, public session_start:Date, public session_end?:Date){}
+    constructor(public subject_id: string, public name:string, public session_start:Date, public session_end?:Date){}
 }
 
 

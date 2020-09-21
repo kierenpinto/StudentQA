@@ -9,12 +9,17 @@ type UserTuple = {
     name:string|undefined,
     email:string,
 }
+
+type GroupTuple = {
+    id: string;
+    name: string;
+}
 /**
  * Subject class - shows the Subject information, including the number of user ids. 
  */
 class Subject {
     public teachers: Array<UserTuple>;
-    constructor(public name: string, public owner_uid: string, teachers: Array<UserTuple>) {
+    constructor(public name: string, public owner_uid: string, teachers: Array<UserTuple>, public groups: Array<GroupTuple>) {
             this.teachers = teachers;
     }
     isOwner(uid: string) {
@@ -30,7 +35,7 @@ const subjectConverter = {
         snapshot: FirebaseFirestore.QueryDocumentSnapshot
     ): Subject {
         const data = snapshot.data();
-        return new Subject(data.name, data.owner_uid, data.teachers);
+        return new Subject(data.name, data.owner_uid, data.teachers, data.groups);
     }
 }
 
@@ -88,18 +93,9 @@ const subjectRequest = functions.https.onCall(async (data, context) => {
  */
 async function create(data: any, uid: string, email:string, displayName:string|undefined) {
     assertString(data.name, "Subject Name")
-    const sub = new Subject(<string>data.name, uid,[{uid,name:displayName, email}]);
+    const sub = new Subject(<string>data.name, uid,[{uid,name:displayName, email}],[]);
     const subject = await makeRef.subjects.withConverter(subjectConverter).add(sub);
     const subjectID = subject.id;
-    // console.log("subject ID", subjectID);
-    // const userRef = makeRef.users.withConverter(userConverter).doc(uid)
-    // const user = (await userRef.get()).data()
-    // if (user) {
-    //     user.teacherSubjects.push(subjectID) // Add subject ID to the list of subjects a user is a teacher for.
-    //     userRef.set(user);
-    // } else {
-    //     throw new functions.https.HttpsError('not-found', "User entry corresponding to teacher not found");
-    // }
     return await firestoreDB.runTransaction(async (transaction)=> {
         await addSubjectToTeacher(subjectID, sub.name ,transaction, uid);
         return { response: 'success' }
@@ -150,7 +146,6 @@ async function update(data: any, uid: string) {
                 } else {
                     throw new functions.https.HttpsError('not-found', "Subject not found");
                 }
-                //return {error: "Cannot update because this is not the owner"}
             }
         });
         return { response: 'success' }
@@ -203,7 +198,7 @@ async function removeTeacher(subjectID: string, subject: Subject, transaction: F
 }
 
 /**
- * Delete a 
+ * Given UID(s) of teachers, removes a subject from the userDoc of each of those users. 
  * @param subjectID 
  * @param transaction 
  * @param teacher_uids 
