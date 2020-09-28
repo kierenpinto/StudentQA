@@ -3,8 +3,6 @@ import {createSubjectInFirebase, renameSubjectInFirebase}  from '../firebase/cal
 const ACTION_TYPES = {
     CREATE_SUBJECT_STATUS: 'CREATE_SUBJECT_STATUS',
     RENAME_SUBJECT_STATUS:'RENAME_SUBJECT_STATUS',
-    SUBSCRIBE_SUBJECT: 'SUBSCRIBE_SUBJECT',
-    UNSUBSCRIBE_SUBJECT: 'UNSUBSCRIBE_SUBJECT',
     DELETE_SUBJECT :'DELETE_SUBJECT',
     UPDATE_SUBJECT_DOC : 'UPDATE_SUBJECT_DOC',
     SELECT_SUBJECT : 'SELECT_SUBJECT'
@@ -33,24 +31,6 @@ function selectSubject(userSubjectObject){
     return {
         type: ACTION_TYPES.SELECT_SUBJECT,
         userSubjectObject
-    }
-}
-
-/**
- * 
- * @param {*} observer Observer
- */
-function subscribeSubject(observer){
-    console.log('subscribe action', observer)
-    return {
-        type: ACTION_TYPES.SUBSCRIBE_SUBJECT,
-        observer
-    }
-}
-
-function unsubscribeSubject(){
-    return {
-        type: ACTION_TYPES.UNSUBSCRIBE_SUBJECT
     }
 }
 
@@ -95,5 +75,5 @@ function renameSubject(subjectID, newName){
 }
 
 export {
-    ACTION_TYPES,createSubject, subscribeSubject,unsubscribeSubject, renameSubject,updateSubjectDoc, selectSubject
+    ACTION_TYPES,createSubject, renameSubject,updateSubjectDoc, selectSubject
 }

@@ -35,7 +35,7 @@ const subjectConverter = {
         snapshot: FirebaseFirestore.QueryDocumentSnapshot
     ): Subject {
         const data = snapshot.data();
-        return new Subject(data.name, data.owner_uid, data.teachers, data.groups);
+        return new Subject(data.name, data.owner_uid, data.teachers, data.groups||[]);
     }
 }
 

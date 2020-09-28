@@ -2,7 +2,6 @@ import { ACTION_TYPES } from "../actions/subjects";
 
 const initialState = {
     userSubjectObject:null,
-    groupNames:[],
     subjectData: {},
     subjectAddStatus: null
 }

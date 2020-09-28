@@ -1,27 +1,26 @@
 
 /* Actions */
 const ACTION_TYPES = {
-    CREATE_SESSION: 'CREATE_SESSION',
-    SET_ACTIVE_SESSION: 'SET_ACTIVE_SESSION'
+    SELECT_SESSION: 'SELECT_SESSION',
+    UPDATE_SESSION_DOC: 'UPDATE_SESSION_DOC'
 }
 
 /* Action Creators */
-function createSession(text,class_id){
+function selectSession(session_id){
     return {
-        type: ACTION_TYPES.CREATE_SESSION,
-        text,
-        class_id
+        type: ACTION_TYPES.SELECT_SESSION,
+        session_id
     }
 }
 
-function setActiveSession(session_id){
+function updateSessionDoc(newDoc){
     return {
-        type: ACTION_TYPES.SET_ACTIVE_SESSION,
-        session_id
+        type: ACTION_TYPES.UPDATE_SESSION_DOC,
+        newDoc
     }
 }
 
 
 export {
-    ACTION_TYPES,createSession, setActiveSession
+    ACTION_TYPES,selectSession, updateSessionDoc
 }

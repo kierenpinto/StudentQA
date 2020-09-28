@@ -13,5 +13,7 @@
  */
 import {subjectRequest} from './subject';
 import {userRequest} from './user';
+import {groupRequest} from './group';
+import {sessionRequest} from './session';
 /** Export all request types */
-export {subjectRequest, userRequest} 
+export {subjectRequest, userRequest, groupRequest, sessionRequest} 
