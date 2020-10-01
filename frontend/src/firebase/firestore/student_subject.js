@@ -1,39 +1,43 @@
-import {firestore} from 'firebase';
+import { firestore } from 'firebase';
 import { updateStudentQDoc } from '../../actions/student';
 
 const db = firestore();
 
-export default function(store){
+export default function (store) {
     let stdSubObserver = null;
     let currentStdSub = null;
     let currentQuestions = null;
-    store.subscribe(()=>{
+    store.subscribe(() => {
         const state = store.getState();
         const previous = currentStdSub;
         currentStdSub = state.student.subgroupObj;
-        if(previous != currentStdSub){
-            if(stdSubObserver){
+        if (previous != currentStdSub) {
+            console.log("CHANGE IN SUBJECT GROUP")
+            if (currentQuestions) {
+                console.log("QUESIIONS EXIST AND MUST BE DELETED/UNSUBED")
+                currentQuestions.forEach((q, index) => {
+                    store.dispatch(updateStudentQDoc(0, null))
+                })
+                currentQuestions.forEach(unsub => unsub());
+            }
+            if (stdSubObserver) {
                 stdSubObserver() // Unsubscribe
                 stdSubObserver = null;
             } else {
                 stdSubObserver = null;
             }
-            if (currentStdSub){
-                stdSubObserver = currentStdSub.subRef.onSnapshot(doc=>{
+            if (currentStdSub) {
+                stdSubObserver = currentStdSub.subRef.onSnapshot(doc => {
                     const data = doc.data();
                     console.log("Latest student subject group Doc Data", data);
-                    if(currentQuestions){
-                        currentQuestions.forEach(unsub=>unsub());
-                    }
-                    if(data){
-                        data.questions.forEach((question,index)=>{
-                            question.onSnapshot(qDoc=>{
+                    if (data) {
+                        currentQuestions = data.questions.map((question, index) => {
+                            return question.onSnapshot(qDoc => {
                                 const qData = qDoc.data();
-                                store.dispatch(updateStudentQDoc(index,qData));
+                                store.dispatch(updateStudentQDoc(index, qData));
                             })
                         })
-                        currentQuestions = data.questions;
-                    }                    
+                    }
                 })
             }
 
