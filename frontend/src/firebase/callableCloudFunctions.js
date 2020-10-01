@@ -1,6 +1,10 @@
 
 import firebaseApp from './firebase'
-firebaseApp.functions().useFunctionsEmulator("http://localhost:5001");
+console.log("CHECKING IF IN LOCAL DEBUG",process.env)
+if (process.env.REACT_APP_LOCAL_FUNCTIONS){
+    firebaseApp.functions().useFunctionsEmulator("http://localhost:5001");
+    console.log("IN LOCAL DEBUG");
+}
 // Called by Redux Thunks!
 function createSubject(name){
     const subjectReq = firebaseApp.functions().httpsCallable('subjectRequest');
@@ -25,28 +29,6 @@ function renameSubject(subjectID, newName){
         name: newName
     }
     return subjectReq(reqRenameSubject)
-}
-
-function test(user) {
-
-    
-    const userReq = firebaseApp.functions().httpsCallable('userRequest');
-    const subjectReq = firebaseApp.functions().httpsCallable('subjectRequest');
-    const reqCreateUser = {
-        action: 'create',
-        userType: 'Student',
-    }
-    const reqRenameUser = {
-        action: 'changeOwn',
-        newName: 'Fancy Pants'
-    }
-    const response = (result) => console.log('result', result)
-    // userReq(reqCreateUser).then(response)
-    const reqCreateSubject = {
-        action: 'create',
-        name: 'ECE2598'
-    }
-    //subjectReq(reqCreateSubject).then(response)
 }
 
 export {createSubject as createSubjectInFirebase, renameSubject as renameSubjectInFirebase}

@@ -23,7 +23,7 @@ class Subject {
             this.teachers = teachers;
     }
     isOwner(uid: string) {
-        return this.owner_uid == uid;
+        return this.owner_uid === uid;
     }
 }
 
@@ -188,7 +188,7 @@ async function remove(data: any, uid: string) {
 
 async function removeTeacher(subjectID: string, subject: Subject, transaction: FirebaseFirestore.Transaction, teacher_uid: string) {
     //Find UID
-    const teacherIndex = subject.teachers.findIndex(t=>t.uid==teacher_uid)
+    const teacherIndex = subject.teachers.findIndex(t=>t.uid===teacher_uid)
     if(teacherIndex<0){
         throw new functions.https.HttpsError('not-found', "User entry in subject not found - cannot delete")
     }
@@ -204,14 +204,17 @@ async function removeTeacher(subjectID: string, subject: Subject, transaction: F
  * @param teacher_uids 
  */
 async function removeSubjectFromUsers(subjectID: string,transaction: FirebaseFirestore.Transaction, teacher_uids: string | Array<string>){
+    let t_uids: Array<string>;
     if (!Array.isArray(teacher_uids)){
-        teacher_uids = [teacher_uids]
+        t_uids = [teacher_uids]
+    } else {
+        t_uids = teacher_uids;
     }
-    const userRefs = teacher_uids.map(id=> makeRef.users.withConverter(userConverter).doc(id))
+    const userRefs = t_uids.map(id=> makeRef.users.withConverter(userConverter).doc(id))
     const users = (await transaction.getAll(...userRefs)).map(d=>d.data())
     users.forEach((user,index)=>{
         if (user) {
-            const subjectIndex = user.teacherSubjects.findIndex(el=> el.id == subjectID)
+            const subjectIndex = user.teacherSubjects.findIndex(el=> el.id === subjectID)
             if (subjectIndex<0){
                 throw new functions.https.HttpsError('not-found', "Subject entry in user not found - cannot delete")
             }
@@ -232,11 +235,11 @@ async function addTeacher(subjectID: string, subject: Subject, transaction: Fire
         const name = teacher.displayName;
         const email = teacher.email;
         console.log("Add Teacher", email,teacher_email)
-        if (!(email==teacher_email)){
+        if (!(email===teacher_email)){
             throw new functions.https.HttpsError('failed-precondition', 'Teacher email address and user email address - report to administrator')
         }
         // Check user doesn't already exist in teacher:
-        if(subject.teachers.find(t=>t.uid==teacher_uid)){
+        if(subject.teachers.find(t=>t.uid===teacher_uid)){
             throw new functions.https.HttpsError('already-exists', 'teacher already exists in subject');
         }
         // Push UID of teacher into array
@@ -244,7 +247,7 @@ async function addTeacher(subjectID: string, subject: Subject, transaction: Fire
         await addSubjectToTeacher(subjectID, subject.name, transaction, teacher_uid);
         
     } catch (error) {
-        if (error == 'auth/user-not-found'){
+        if (error === 'auth/user-not-found'){
             throw new functions.https.HttpsError('not-found', "Teacher not found in system");
         } else {
             throw error;
@@ -258,7 +261,7 @@ async function addSubjectToTeacher(subjectID: string, subjectName: string, trans
     const userRef = makeRef.users.doc(teacher_uid).withConverter(userConverter)
     const user = (await transaction.get(userRef)).data()
     if (user) {
-        if(user.teacherSubjects.find(t=>t.id==subjectID)){
+        if(user.teacherSubjects.find(t=>t.id===subjectID)){
             throw new functions.https.HttpsError('already-exists', 'subject already exists in teacher');
         }
         user.teacherSubjects.push({name: subjectName, id: subjectID}) // Add subject ID to the list of subjects a user is a teacher for.
@@ -275,7 +278,7 @@ async function renameSubject(subjectID:string, subject: Subject, newSubjectName:
     teacherDocs.map((teacher,teacher_index)=>{
         if (teacher){
             //console.log("Teacher", teacher, "SubjectID", subjectID)
-            const subject_index = teacher.teacherSubjects.findIndex(sub=>sub.id == subjectID)
+            const subject_index = teacher.teacherSubjects.findIndex(sub=>sub.id === subjectID)
             teacher.teacherSubjects[subject_index].name = newSubjectName;
             //console.log(teacher_references[teacher_index],teacher)
             transaction.set(teacher_references[teacher_index],teacher);

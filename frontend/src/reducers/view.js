@@ -19,6 +19,8 @@ function previousViewReduce(previousState){
             return ViewTypes.TEACHER;
         case ViewTypes.SIGNIN:
             return ViewTypes.HOME;
+        case ViewTypes.STUDENT_QUESTIONS:
+            return ViewTypes.STUDENT;
         default:
             return previousState.selection;
     }

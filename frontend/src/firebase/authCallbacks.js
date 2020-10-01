@@ -22,7 +22,7 @@ function authCallbacks(store) {
 function test(user) {
     console.log('User', user);
 
-    firebaseApp.functions().useFunctionsEmulator("http://localhost:5001");
+    //firebaseApp.functions().useFunctionsEmulator("http://localhost:5001");
     const userReq = firebaseApp.functions().httpsCallable('userRequest');
     const subjectReq = firebaseApp.functions().httpsCallable('subjectRequest');
     const reqCreateUser = {

@@ -13,7 +13,9 @@ import SignIn from './views/SignIn';
 import SignOutButton from './components/SignOutButton';
 import firebase from './firebase/firebase';
 import Home from './views/Home';
-import Student from './views/Student';
+import Student from './views/students/';
+import StudentQuestions from './views/students/Questions'
+
 function App(props) {
   const dispatch = props.dispatch;
   const onBackClickHandle = ()=>{
@@ -46,6 +48,8 @@ function App(props) {
             return <SignIn />
           case ViewTypes.STUDENT:
             return  <Student />
+          case ViewTypes.STUDENT_QUESTIONS:
+            return <StudentQuestions />
           default:
             return (<React.Fragment>Invalid View Selected</React.Fragment>)
         }

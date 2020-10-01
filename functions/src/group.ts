@@ -176,7 +176,7 @@ async function remove(data: classRequestData, uid: string, transaction: Firebase
     }
     const ref = makeRef.classGroups(data.subject_id).withConverter(subjectGroupConverter).doc(data.id);
     // Unlink other things:
-    const groupIndex = subject.groups.findIndex(el=>el.id == data.id);
+    const groupIndex = subject.groups.findIndex(el=>el.id === data.id);
     if ( groupIndex > 0 ){
         subject.groups.splice(groupIndex,1);
     }else {

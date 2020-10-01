@@ -2,7 +2,8 @@ const { ACTION_TYPES } = require("../actions/sessions");
 
 const initialState = {
     sessionData:null,
-    sessionObject: null
+    sessionObject: null,
+    questionList: null
 }
 function sessionList(previousState = initialState,action){
     switch (action.type) {
@@ -15,6 +16,10 @@ function sessionList(previousState = initialState,action){
         case ACTION_TYPES.SELECT_SESSION:
             return Object.assign({}, previousState, {
                 sessionObject: action.session_id
+            })
+        case ACTION_TYPES.UPDATE_QUESTION_DOCS:
+            return Object.assign({},previousState,{
+                questionList: action.newDocs
             })
         default:
             return previousState;

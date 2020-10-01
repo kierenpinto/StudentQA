@@ -6,6 +6,7 @@ import session from './sessions'
 import questionList from './questions'
 import user from './user'
 import group from './group'
+import student from './student'
 const mainReducer = combineReducers({
     view,
     subject: subject,
@@ -13,6 +14,7 @@ const mainReducer = combineReducers({
     session,
     questionList,
     user,
+    student,
     firestore: firestoreReducer
 })
 

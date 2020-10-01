@@ -15,5 +15,7 @@ import {subjectRequest} from './subject';
 import {userRequest} from './user';
 import {groupRequest} from './group';
 import {sessionRequest} from './session';
+import {joinSubject, askQuestion} from './student';
+import {questionRequest} from './question';
 /** Export all request types */
-export {subjectRequest, userRequest, groupRequest, sessionRequest} 
+export {subjectRequest, userRequest, groupRequest, sessionRequest, joinSubject, askQuestion, questionRequest} 

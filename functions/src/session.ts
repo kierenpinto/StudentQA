@@ -23,9 +23,8 @@ class Session {
 const sessionConverter = {
     toFirestore(session: Session): FirebaseFirestore.DocumentData {
         const session_start = Timestamp.fromDate(session.session_start)
-        let session_end;
         if (session.session_end) {
-            session_end = Timestamp.fromDate(session.session_end);
+            const session_end = Timestamp.fromDate(session.session_end);
             return { name:session.name, session_end, session_start }
         } else {
             return { name:session.name, session_start }
@@ -106,8 +105,8 @@ async function create(data: classRequestData, transaction: FirebaseFirestore.Tra
     const session = new Session("", startTime);
     const sessionRef = makeRef.sessions(data.group_id, data.subject_id).withConverter(sessionConverter).doc();
     //Check that a session doesn't already exist:
-    subjectGroup.sessions.forEach(session=> {
-        if (!session.end) throw new functions.https.HttpsError('invalid-argument',
+    subjectGroup.sessions.forEach(sess=> {
+        if (!sess.end) throw new functions.https.HttpsError('invalid-argument',
         'Invalid classGroup action request');
     } )
     subjectGroup.sessions.push({ id: sessionRef.id, start: startTime });
@@ -136,7 +135,7 @@ async function update(data: classRequestData, transaction: FirebaseFirestore.Tra
     }
     switch (data.updateAction) {
         case "end":
-            const sessionIndex = subjectGroup.sessions.findIndex(el=>el.id ==data.id)
+            const sessionIndex = subjectGroup.sessions.findIndex(el=>el.id ===data.id)
             if( sessionIndex < 0){
                 throw new functions.https.HttpsError('not-found', "Could not find session in group object");
             }

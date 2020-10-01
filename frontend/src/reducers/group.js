@@ -2,7 +2,7 @@ const { ACTION_TYPES } = require("../actions/groups");
 
 const initialState = {
     groupObject:null,
-    groupData:{}
+    groupData:null,
 }
 function group(previousState = initialState,actions){
     switch (actions.type) {

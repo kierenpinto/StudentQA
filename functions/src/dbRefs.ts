@@ -11,14 +11,15 @@ const db = admin.firestore();
 // const classGroups = (classGroup: string, subject: string) => subjects(subject).collection('classes').doc(classGroup);
 // const sessions = (session: string, classGroup: string, subject: string) => classGroups(classGroup, subject).collection('sessions').doc(session);
 // const questions = (question: string, session: string, classGroup: string, subject: string) => sessions(session, classGroup, subject).collection('questions').doc(question);
-
+db.settings({ ignoreUndefinedProperties: true })
 const users = db.collection('users');
 const teachers = db.collection('teachers');
 const students = db.collection('students');
 const subjects = db.collection('subjects');
+const userStudentGroup = (user:string) => db.collection('users').doc(user).collection("subject_group");
 const classGroups = (subject: string) => subjects.doc(subject).collection('classes');
 const sessions = (classGroup: string, subject: string) => classGroups(subject).doc(classGroup).collection('sessions');
 const questions = (session: string, classGroup: string, subject: string) => sessions(classGroup, subject).doc(session).collection('questions');
-
-const makeRef = {users,teachers,students,subjects,classGroups,sessions, questions}
+const classCollectionGroup = db.collectionGroup('classes');
+const makeRef = {users,teachers,students,subjects,userStudentGroup,classGroups,sessions, questions,classCollectionGroup}
 export {db as firestoreDB, makeRef}

@@ -1,40 +1,37 @@
-import React from 'react';
+import React, { useReducer } from 'react';
 import { connect } from 'react-redux';
 import { createQuestion } from '../../actions/questions';
-import { Button,  Card } from 'react-bootstrap';
+import { Button, Card } from 'react-bootstrap';
 import ListView from '../../components/List';
+import { claimQuestionInFirebase, revokeQuestionClaimInFirebase } from '../../firebase/callables/question';
 
 
 function QuestionViewItem(props) {
-    const name = props.name;
-    const id = props.id;
-    const text = props.text; // Text of the question
-    //const claimed = props.claimed; // If the question has been claimed or not;
+    const { name, id, text, uid, teacher_id, teacherName } = props;
+
     const onClaimQuestion = () => props.onClaimQuestion(id);
     const onUnclaimQuesiton = () => props.onRevokeClaim(id);
-    const teacher = props.teacher || false; // Name of teacher attending to the student 
-    if (teacher) {
-
-    }
     return (
         <Card.Body>
             <div style={{ display: 'flex', alignItems: 'center' }}>
                 <div className="px-2" style={{ minWidth: 'fit-content' }}>{name} : {text}</div>
                 <div style={{ width: '100%' }} />
-                {teacher &&
+                {teacher_id &&
                     <React.Fragment>
                         <div className="px-2" style={{ minWidth: 'fit-content' }}>
-                            Assigned to {teacher}
+                            Assigned to {teacherName}
                         </div>
-                        <div className="px-2" style={{ minWidth: 'fit-content' }}>
-                            <Button variant="secondary"> Revoke Claim Question </Button>
-                        </div >
+                        {teacher_id == uid &&
+                            <div className="px-2" style={{ minWidth: 'fit-content' }}>
+                                <Button variant="secondary" onClick={onUnclaimQuesiton}> Revoke Claim Question </Button>
+                            </div >
+                        }
                     </React.Fragment>
                 }
 
-                {!teacher &&
+                {!teacher_id &&
                     <div style={{ minWidth: 'fit-content' }}>
-                        <Button variant="danger"> Claim Question </Button>
+                        <Button variant="primary" onClick={onClaimQuestion}> Claim Question </Button>
                     </div>
                 }
             </div>
@@ -43,20 +40,23 @@ function QuestionViewItem(props) {
 }
 
 function SessionView(props) {
-    const dispatch = props.dispatch;
-    const ItemList = props.questions.map((grp) => grp.name);
-    const CreateQuestionHandle = function (questionName) {
-        dispatch(createQuestion(questionName, 1));
-    }
+    const { uid, subject_id, group_id, session_id } = props;
+    const onClaimQuestion = (id)=>claimQuestionInFirebase(subject_id,group_id,session_id,id).then(out=>console.log(out))
+    const onRevokeClaim = (id)=>revokeQuestionClaimInFirebase(subject_id,group_id,session_id,id).then(out=>console.log(out))
     return (
         <React.Fragment>
-            <ListView list={props.questions} >{QuestionViewItem}</ListView>
+            <ListView list={props.questions} onClaimQuestion={onClaimQuestion} onRevokeClaim={onRevokeClaim} uid={uid}>{QuestionViewItem}</ListView>
         </React.Fragment>
     )
 }
 const mapStateToProps = (state) => {
+    const ql = state.session.questionList
     return {
-        questions: state.questionList.questions
+        questions: ql ? ql.map(q => { return { ...q, text: q.question } }) : [],
+        uid: state.user.firebase ? state.user.firebase.uid : null,
+        subject_id: state.subject.userSubjectObject ? state.subject.userSubjectObject.id : null,
+        group_id: state.group.groupObject ? state.group.groupObject.id : null,
+        session_id: state.session.sessionObject
     }
 }
 

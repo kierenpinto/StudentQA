@@ -14,18 +14,20 @@ export default function (store){
                 //store.dispatch(unsubscribeUser())
                 observer()
             }
-            observer = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
-                if (doc.exists) {
-                    const document_data = doc.data();
-                    console.log(document_data)
-                    store.dispatch(userdocUpdate(document_data));
-                    store.dispatch(updateUserSubjects(document_data.teacherSubjects.map(sub => {
-                        return { id: sub.docRef.id, ref: sub.docRef, name: sub.name }
-                    })));
-                } else {
-                    createUserInFirebase();
-                }
-            })
+            if (currentUser){
+                observer = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+                    if (doc.exists) {
+                        const document_data = doc.data();
+                        console.log(document_data)
+                        store.dispatch(userdocUpdate(document_data));
+                        store.dispatch(updateUserSubjects(document_data.teacherSubjects.map(sub => {
+                            return { id: sub.docRef.id, ref: sub.docRef, name: sub.name }
+                        })));
+                    } else {
+                        createUserInFirebase();
+                    }
+                })
+            }
             //store.dispatch(subscribeUser(unsubscribe_user))
         }
     })

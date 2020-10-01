@@ -10,7 +10,8 @@ const ViewTypes = {
     QUESTION:'QUESTION',
     SIGNIN:'SIGNIN',
     STUDENT:'STUDENT',
-    HOME:'HOME'
+    HOME:'HOME',
+    STUDENT_QUESTIONS: 'STUDENT_QUESTIONS'
 }
 
 

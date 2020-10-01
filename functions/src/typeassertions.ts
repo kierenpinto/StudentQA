@@ -19,7 +19,7 @@ function assertString(str:string,msg?:string){
  * @param msg Text to add to the error message: Not Valid String Type for : ${txt}
  */
 function assertTrue(bool:boolean, msg?:string){
-    if (bool == true){
+    if (bool === true){
         if (msg){
             throw new TypeError("True Assertion failed- False value Boolean for:" + msg);
         }else{

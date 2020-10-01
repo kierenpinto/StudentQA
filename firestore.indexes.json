@@ -1,4 +1,8 @@
 {
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [{
+    "collectionGroup": "classes",
+    "fieldPath": "join_code",
+    "indexes":[{"queryScope": "COLLECTION_GROUP","order":"ASCENDING"}]
+  }]
 }
