@@ -72,7 +72,7 @@ function SessionsView(props) {
         const EndSessionClickHandle = (key) => {
             endSessionInFirebase(subjectID, groupID, key)
         }
-        const inProgress = sessions.length>0 ? sessions[0].end: false;
+        const inProgress = sessions.length>0 ? sessions[0].end == null : false;
         return (
             <React.Fragment>
                 <Container className="pt-3">
